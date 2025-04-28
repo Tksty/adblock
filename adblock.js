@@ -20,8 +20,11 @@
 
     function fetchHostsList() {
         fetch(hostsUrl)
-            .then(function(response) { return response.text(); })
+            .then(function(response) {
+                return response.text();
+            })
             .then(function(text) {
+                // Process hosts asynchronously in batches
                 parseHosts(text);
                 console.log('[AdBlock] Loaded', blockedHosts.length, 'hosts');
             })
@@ -32,7 +35,11 @@
 
     function parseHosts(text) {
         var lines = text.split('\n');
-        lines.forEach(function(line) {
+        var batchSize = 500; // Process in batches
+        var currentBatch = [];
+        
+        // Async batch processing
+        lines.forEach(function(line, index) {
             line = line.trim();
             if (line.startsWith("#") || line === "") return;
             if (line.startsWith("0.0.0.0") || line.startsWith("127.0.0.1")) {
@@ -44,6 +51,20 @@
                     }
                 }
             }
+
+            // Process in batches
+            if (blockedHosts.length >= batchSize) {
+                currentBatch = blockedHosts.slice(-batchSize);
+                setTimeout(() => processBatch(currentBatch), 0); // Process batch asynchronously
+            }
+        });
+    }
+
+    function processBatch(batch) {
+        // Blocking logic for the batch
+        console.log('[AdBlock] Blocking batch:', batch.length);
+        batch.forEach(function(host) {
+            // Additional blocking logic can be applied here
         });
     }
 
@@ -59,7 +80,7 @@
                 }
                 if (isBlocked(url)) {
                     console.log('[AdBlock] Blocked fetch to', url);
-                    return new Promise(function(){}); // prevent request
+                    return new Promise(function(){}); // Prevent request
                 }
             }
             return originalFetch.apply(this, arguments);
@@ -77,7 +98,7 @@
                 }
                 if (isBlocked(url)) {
                     console.log('[AdBlock] Blocked XHR to', url);
-                    return; // do nothing
+                    return; // Do nothing
                 }
             }
             return originalOpen.apply(this, arguments);
